@@ -40,7 +40,7 @@ exports.create = async (req,res)=>{
         });
 
         let blogData = await newBlog.save();
-        //let populatedData = await blogData.populate('category').populate('created_by').exec();
+        //let populatedData = await blogData.populate('category').populate('created_by').execPopulate();
 
 
         return res.status(201).send({

@@ -5,80 +5,115 @@ const mongoose=require('mongoose');
 
 exports.list = async (req,res) => {
 
-    let query = [
-        {
-            $lookup:
+    try {
+        let query = [
             {
-                from : "users",
-                localField: "created_by",
-                foreignField: "_id",
-                as : "creator"
-            }
-        },
-        {$unwind : '$creator'},
-        {
-            $lookup:
+                $lookup:
+                {
+                    from : "users",
+                    localField: "created_by",
+                    foreignField: "_id",
+                    as : "creator"
+                }
+            },
+            {$unwind : '$creator'},
             {
-                from : "categories",
-                localField: "category",
-                foreignField: "_id",
-                as : "category_details"
-            }
-        },
-        {$unwind : '$category_details'},
-    ];
-
-    // localhost:4000/blogs?keyword=ttttt2
-    if(req.query.keyword && req.query.keyword!= ''){
-        query.push({
-            $match: {
-                $or :[
-                    {
-                        'creator.first_name' : {$regex : req.query.keyword} 
-                    },
-                    {
-                        'category_details.name' : {$regex : req.query.keyword}
-                    },
-                    {
-                        title : {$regex : req.query.keyword}
-                    }
-                ]
-            }
-        });
-    }
-
-    //localhost:4000/blogs?keyword=ttttt2&&category=sport
-    if(req.query.category && req.query.category!= ''){
-        query.push({
-            $match: {
-                $or :[
-                    {
-                        'category_details.slug' : {$regex : req.query.category}
-                    },
-                ]
-            }
-        });
-    }
-
-    // filter the data by user 
-    // localhost:4000/blogs?user_id=633de61f01b009e30a1ac37a
-    if(req.query.user_id && req.query.user_id!= ''){
-        query.push({
-            $match: {
-                created_by : mongoose.Types.ObjectId(req.query.user_id),
-            }
-        });
-    }
-
-
-    let blogs = await Blog.aggregate(query);
-
-    return res.send({
-        message : 'Blog successfully fetched',
-        data:{
-            blogs:blogs,
+                $lookup:
+                {
+                    from : "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as : "category_details"
+                }
+            },
+            {$unwind : '$category_details'},
+        ];
+    
+        // localhost:4000/blogs?keyword=ttttt2
+        if(req.query.keyword && req.query.keyword!= ''){
+            query.push({
+                $match: {
+                    $or :[
+                        {
+                            'creator.first_name' : {$regex : req.query.keyword} 
+                        },
+                        {
+                            'category_details.name' : {$regex : req.query.keyword}
+                        },
+                        {
+                            title : {$regex : req.query.keyword}
+                        }
+                    ]
+                }
+            });
         }
-    });
+    
+        //localhost:4000/blogs?keyword=ttttt2&&category=sport
+        if(req.query.category && req.query.category!= ''){
+            query.push({
+                $match: {
+                    $or :[
+                        {
+                            'category_details.slug' : {$regex : req.query.category}
+                        },
+                    ]
+                }
+            });
+        }
+    
+        // filter the data by user 
+        // localhost:4000/blogs?user_id=633de61f01b009e30a1ac37a
+        if(req.query.user_id && req.query.user_id!= ''){
+            query.push({
+                $match: {
+                    created_by : mongoose.Types.ObjectId(req.query.user_id),
+                }
+            });
+        }
+    
+    
+        // first page 0 ,second skip 10 , third skip 20
+        // let total = await Blog.countDocuments(query);
+        // let page = (req.query.page)?parseInt(req.query.page):1;
+        // let perPage = (req.query.perPage)?parseInt(req.query.perPage):10;
+        // let skip = (page-1)*perPage; 
+        // query.push({
+        //     $skip:skip,
+        // });
+        // query.push({
+        //     $limit:perPage,
+        // });
+    
+    
+        //localhost:4000/blogs?sortBy=title&&sortOrder=asc
+        if(req.query.sortBy && req.query.sortOrder){
+            var sort = {};
+            sort[req.query.sortBy] = (req.query.sortOrder == 'asc')?1:-1;
+            query.push({
+                $sort : sort
+            });
+        }else{
+            // default sort
+            query.push({
+                $sort : {createdAt:-1}
+            });
+        }
+    
+    
+        let blogs = await Blog.aggregate(query);
+        return res.send({
+            message : 'Blog successfully fetched',
+            data:{
+                //blogs:blogs,
+                blogs:blogs.map(doc=> Blog.hydrate(doc)), 
+            }
+        });
+    }catch(err) {
+        return res.status(400).send({
+            message:err.message,
+            data:err
+        });
+    }
 
 }
 

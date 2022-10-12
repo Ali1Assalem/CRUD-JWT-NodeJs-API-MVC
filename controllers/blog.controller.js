@@ -1,7 +1,86 @@
 const { Validator } = require('node-input-validator');
-const blog = require('./../models/blog.model');
+const Blog = require('./../models/blog.model');
 
 const mongoose=require('mongoose');
+
+exports.list = async (req,res) => {
+
+    let query = [
+        {
+            $lookup:
+            {
+                from : "users",
+                localField: "created_by",
+                foreignField: "_id",
+                as : "creator"
+            }
+        },
+        {$unwind : '$creator'},
+        {
+            $lookup:
+            {
+                from : "categories",
+                localField: "category",
+                foreignField: "_id",
+                as : "category_details"
+            }
+        },
+        {$unwind : '$category_details'},
+    ];
+
+    // localhost:4000/blogs?keyword=ttttt2
+    if(req.query.keyword && req.query.keyword!= ''){
+        query.push({
+            $match: {
+                $or :[
+                    {
+                        'creator.first_name' : {$regex : req.query.keyword} 
+                    },
+                    {
+                        'category_details.name' : {$regex : req.query.keyword}
+                    },
+                    {
+                        title : {$regex : req.query.keyword}
+                    }
+                ]
+            }
+        });
+    }
+
+    //localhost:4000/blogs?keyword=ttttt2&&category=sport
+    if(req.query.category && req.query.category!= ''){
+        query.push({
+            $match: {
+                $or :[
+                    {
+                        'category_details.slug' : {$regex : req.query.category}
+                    },
+                ]
+            }
+        });
+    }
+
+    // filter the data by user 
+    // localhost:4000/blogs?user_id=633de61f01b009e30a1ac37a
+    if(req.query.user_id && req.query.user_id!= ''){
+        query.push({
+            $match: {
+                created_by : mongoose.Types.ObjectId(req.query.user_id),
+            }
+        });
+    }
+
+
+    let blogs = await Blog.aggregate(query);
+
+    return res.send({
+        message : 'Blog successfully fetched',
+        data:{
+            blogs:blogs,
+        }
+    });
+
+}
 
 exports.create = async (req,res)=>{
     
@@ -30,7 +109,7 @@ exports.create = async (req,res)=>{
             await image_file.mv(image_path);
 		}
 
-        const newBlog = new blog({
+        const newBlog = new Blog({
             title:req.body.title,
             short_description:req.body.short_description,
             description:req.body.description,

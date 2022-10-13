@@ -1,5 +1,6 @@
 const { Validator } = require('node-input-validator');
 const Blog = require('./../models/blog.model');
+const Category = require('./../models/category.model');
 
 const mongoose=require('mongoose');
 
@@ -117,6 +118,32 @@ exports.list = async (req,res) => {
 
 }
 
+// get specific blog
+exports.specificBlog = async (req,res)=> {
+    try{
+
+        let blog_id = req.query.blog_id;
+        let blog = await Blog.findOne({_id:blog_id})
+        .populate('category')
+        .populate('created_by');
+        
+        return res.send({
+            message : 'Blog successfully fetched',
+            data:{
+                //blogs:blogs,
+                blog:blog, 
+            }
+        });
+
+
+    }catch(err){ 
+        return res.status(400).send({
+            message:err.message,
+            data:err
+        });
+    }
+};
+
 exports.create = async (req,res)=>{
     
     if(req.files && req.files.image){
@@ -154,12 +181,16 @@ exports.create = async (req,res)=>{
         });
 
         let blogData = await newBlog.save();
-        //let populatedData = await blogData.populate('category').populate('created_by').execPopulate();
-
+        let populatedData = await Blog.findOne({_id:blogData._id})
+        .populate('category')
+        .populate('created_by');
+        
 
         return res.status(201).send({
             message:'Blog Created Successfully',
-            data:blogData
+            data:{
+                blog:populatedData
+            }
         });
 
     }catch(err){

@@ -7,4 +7,4 @@ router.get('/specificBlog',blogController.specificBlog);
 router.post('/create',middleware.auth,blogController.create);
 
 
-module.exports = router; 
+module.exports = router;

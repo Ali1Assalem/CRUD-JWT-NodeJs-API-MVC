@@ -1,8 +1,9 @@
 const { Validator } = require('node-input-validator');
 const Blog = require('./../models/blog.model');
 const Category = require('./../models/category.model');
-
 const mongoose=require('mongoose');
+const fs=require('fs');
+
 
 exports.list = async (req,res) => {
 
@@ -200,4 +201,99 @@ exports.create = async (req,res)=>{
         });
     }
 
+}
+
+exports.update = async (req,res) =>{
+    let blog_id =req.body.blog_id;
+
+    if(!mongoose.Types.ObjectId.isValid(blog_id)){
+		return res.status(400).send({
+	  		message:'Invalid blog id',
+	  		data:{}
+	  	});
+	}
+
+    Blog.findOne({_id:blog_id}).then(async(blog)=>{
+        if(!blog){
+            return res.status(400).send({
+                message:'No blog found',
+                data:{}
+            });
+        }else{
+            let current_user = req.user;
+
+            if(blog.created_by != current_user._id){
+                return res.status(400).send({
+                    message:'Access Denied',
+                    data:{}
+                });
+            }else{
+
+                let rules = {
+                    title:'required|minLength:5|maxLength:100',
+                    short_description : 'required',
+                    description:'required',
+                    category:'required'
+                }
+                
+                try{
+                    if(req.files && req.files.image){
+                        req.body['image']=req.files.image;
+                        rules['image'] = 'required|mime:jpg.jpeg,png'
+                    }
+                    
+                    const v = new Validator(req.body, rules);
+                
+                    const matched = await v.check();
+                    if(!matched){ 
+                        return res.status(422).send(v.errors);
+                    } 
+
+                    if(req.files && req.files.image){
+                        var image_file= req.files.image;
+                        var image_file_name=Date.now()+'-blog-image-'+image_file.name;
+                        var image_path=publicPath+'/uploads/blog_images/'+image_file_name;
+                        await image_file.mv(image_path);
+
+                        let old_path = publicPath+'/uploads/blog_images/'+blog.image;
+                        if(fs.existsSync(old_path)){
+                            fs.unlinkSync(old_path);
+                        }
+                    }else{
+                        var image_file_name = blog.image;
+                    }
+
+                    await Blog.updateOne({_id:blog_id},{
+                        title:req.body.title,
+                        short_description:req.body.short_description,
+                        description:req.body.description,
+                        category:req.body.category,
+                        image:image_file_name
+                    });
+
+                    let updateBblog = await Blog.findOne({_id:blog_id})
+                    .populate('category')
+                    .populate('created_by');
+
+                    return res.status(200).send({
+                        message:'Blog Successfully Updated ',
+                        data:{
+                            blog:updateBblog
+                        }
+                    });
+
+                }catch(err){
+                    return res.status(400).send({
+                        message:err.message,
+                        data:err
+                    });
+                }
+            }
+        }
+    }).catch((err)=>{
+        return res.status(400).send({
+            message:err.message,
+            data:err
+        });
+    });
 }

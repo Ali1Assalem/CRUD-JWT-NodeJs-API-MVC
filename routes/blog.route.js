@@ -6,5 +6,6 @@ router.get('/',blogController.list);
 router.get('/specificBlog',blogController.specificBlog);
 router.post('/create',middleware.auth,blogController.create);
 router.post('/update',middleware.auth,blogController.update);
+router.post('/delete',middleware.auth,blogController.delete);
 
 module.exports = router;

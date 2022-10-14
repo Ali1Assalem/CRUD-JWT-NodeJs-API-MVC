@@ -131,7 +131,6 @@ exports.specificBlog = async (req,res)=> {
         return res.send({
             message : 'Blog successfully fetched',
             data:{
-                //blogs:blogs,
                 blog:blog, 
             }
         });

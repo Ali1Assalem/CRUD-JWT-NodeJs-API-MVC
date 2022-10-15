@@ -7,7 +7,7 @@ const schema = new mongoose.Schema({
  image: {type:String,default:null},
  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
  created_by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
- blog_comments: { type: mongoose.Schema.Types.ObjectId, ref: 'BlogComment' },
+ blog_comments:[{type: mongoose.Schema.Types.ObjectId, ref: 'BlogComment' }],
 },{
     timestamps:true,
     toObject: {

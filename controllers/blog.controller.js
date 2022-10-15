@@ -126,7 +126,8 @@ exports.specificBlog = async (req,res)=> {
         let blog_id = req.query.blog_id;
         let blog = await Blog.findOne({_id:blog_id})
         .populate('category')
-        .populate('created_by');
+        .populate('created_by')
+        .populate('blog_comments');
         
         return res.send({
             message : 'Blog successfully fetched',
